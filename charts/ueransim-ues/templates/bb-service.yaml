@@ -1,0 +1,19 @@
+{{- if and .Values.blackboxExporter.enabled .Values.blackboxExporter.service.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "common.names.fullname" . }}-bb
+  namespace: {{ .Release.Namespace | quote }}
+  labels: {{- include "common.labels.standard" . | nindent 4 }}
+    {{- if .Values.commonLabels }}
+    {{- include "common.tplvalues.render" ( dict "value" .Values.commonLabels "context" $ ) | nindent 4 }}
+    {{- end }}
+    app.kubernetes.io/component: bb
+spec:
+  type: {{ .Values.blackboxExporter.service.type }}
+  ports:
+    - name: metrics
+      port: {{ .Values.blackboxExporter.service.port }}
+      targetPort: metrics
+  selector: {{- include "common.labels.matchLabels" . | nindent 4 }}
+{{- end }}

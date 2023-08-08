@@ -60,7 +60,7 @@ spec:
             - ue
             - -n
             - {{ .Values.count | quote }}
-          {{- end }}    
+          {{- end }}
           {{- if .Values.resources }}
           resources: {{- toYaml .Values.resources | nindent 12 }}
           {{- end }}
@@ -68,7 +68,41 @@ spec:
             - name: config
               mountPath: /etc/ueransim/ue.yaml
               subPath: "ue.yaml"
+        {{- if .Values.blackboxExporter.enabled }}
+        - name: blackbox-exporter
+          image: {{ .Values.blackboxExporter.image }}
+          {{- if .Values.blackboxExporter.command }}
+          command: {{- include "common.tplvalues.render" (dict "value" .Values.blackboxExporter.command "context" $) | nindent 12 }}
+          {{- end }}
+          {{- if .Values.blackboxExporter.args }}
+          args: {{- include "common.tplvalues.render" (dict "value" .Values.blackboxExporter.args "context" $) | nindent 12 }}
+          {{- end }}
+          {{- if .Values.blackboxExporter.ports }}
+          ports: {{- include "common.tplvalues.render" (dict "value" .Values.blackboxExporter.ports "context" $) | nindent 12 }}
+          {{- end }}
+          resources:
+            {{- toYaml .Values.blackboxExporter.resources | nindent 12 }}
+          {{- with .Values.blackboxExporter.livenessProbe }}
+          livenessProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.blackboxExporter.readinessProbe }}
+          readinessProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- if .Values.blackboxExporter.config.enabled }}
+          volumeMounts:
+            - name: bb-config
+              mountPath: /config/blackbox.yaml
+              subPath: blackbox.yaml
+          {{- end }}
+        {{- end }}
       volumes:
         - name: config
           configMap:
             name: {{ include "common.names.fullname" . }}
+        {{- if and .Values.blackboxExporter.enabled .Values.blackboxExporter.config.enabled }}
+        - name: bb-config
+          configMap:
+            name: {{ include "common.names.fullname" . }}-bb
+        {{- end }}
