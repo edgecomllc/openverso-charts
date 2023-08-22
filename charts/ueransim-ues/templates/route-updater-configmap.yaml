@@ -1,0 +1,14 @@
+{{- if and .Values.routeUpdater.enabled .Values.routeUpdater.config.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "common.names.fullname" . }}-route-updater
+  namespace: {{ .Release.Namespace | quote }}
+  labels: {{- include "common.labels.standard" . | nindent 4 }}
+    app.kubernetes.io/component: bb
+data:
+  crontab: |
+    {{- include "common.tplvalues.render" ( dict "value" .Values.routeUpdater.config.crontab "context" $ ) | nindent 4 }}
+  update.sh: |
+    {{- include "common.tplvalues.render" ( dict "value" .Values.routeUpdater.config.update_sh "context" $ ) | nindent 4 }}
+{{- end }}

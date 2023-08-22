@@ -172,3 +172,69 @@ blackboxExporter:
     httpGet:
       path: /-/healthy
       port: metrics
+
+routeUpdater:
+  enabled: false
+  image: webdevops/go-crond:23.2.0-alpine
+
+  args:
+    - "--include=/opt/crontab"
+
+  config:
+    enabled: true
+    crontab: |
+      SHELL=/bin/sh
+      @every 1m root sh /opt/update.sh 8.8.8.8
+
+    update_sh: |
+      #!/bin/sh
+      set -eu
+
+      IFACE_NAME="uesimtun0"
+      HOST_NAME=${1}
+
+      is_ip() {
+          local ip=${1}
+          if expr "$ip" : '[0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*$' >/dev/null; then
+              return 0
+          else
+              return 1
+          fi
+      }
+
+      resolve_dns() {
+          local host="$1"
+          ip=$(nslookup ${1} | awk '/^Address: / { print $2 }' | head -1)
+          echo $ip
+      }
+
+
+      if is_ip "${1}"; then
+          resolved_ip=${1}
+      else
+          resolved_ip=$(resolve_dns ${1})
+      fi
+
+      # set route via custom interfaces
+      ip ro add ${resolved_ip} dev ${IFACE_NAME}
+
+  ports:
+    - name: metrics
+      containerPort: 8080
+      protocol: TCP
+
+  resources:
+    limits:
+      memory: 50Mi
+    requests:
+      memory: 50Mi
+
+  livenessProbe:
+    httpGet:
+      path: /healthz
+      port: metrics
+    failureThreshold: 3
+  readinessProbe:
+    httpGet:
+      path: /healthz
+      port: metrics

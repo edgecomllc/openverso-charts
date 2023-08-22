@@ -24,3 +24,13 @@ blackboxExporter:
           url: 8.8.8.8:443
           module: tcp
           interval: 30s
+
+routeUpdater:
+  enabled: true
+
+  config:
+    enabled: true
+    crontab: |
+      SHELL=/bin/sh
+      @every 1m sh /opt/update.sh 8.8.8.8
+      @every 1m sh /opt/update.sh 1.1.1.1

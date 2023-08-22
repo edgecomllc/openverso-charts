@@ -9,4 +9,4 @@ push:
 	helm push $(HELM_PACKAGE_NAME)-$(HELM_PACKAGE_VERSION).tgz $(HELM_REGISTRY)
 
 test:
-	helm template ueransim ./ --values examples/blackbox-exporter.yaml -n open5gs
+	helm template ueransim ./ --values examples/blackbox-exporter.yaml -n open5gs --debug
