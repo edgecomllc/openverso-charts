@@ -5,7 +5,7 @@ metadata:
   name: {{ include "common.names.fullname" . }}-route-updater
   namespace: {{ .Release.Namespace | quote }}
   labels: {{- include "common.labels.standard" . | nindent 4 }}
-    app.kubernetes.io/component: bb
+    app.kubernetes.io/component: route-updater
 data:
   crontab: |
     {{- include "common.tplvalues.render" ( dict "value" .Values.routeUpdater.config.crontab "context" $ ) | nindent 4 }}
