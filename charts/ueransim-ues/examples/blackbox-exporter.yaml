@@ -1,0 +1,36 @@
+---
+
+gnb:
+  hostname: ueransim-ueransim-gnb
+
+blackboxExporter:
+  enabled: true
+
+  metrics:
+    enabled: true
+    serviceMonitor:
+      labels:
+        release: kube-prometheus-stack
+      targets:
+        - name: https-google-com
+          url: https://google.com
+          module: http_2xx
+          interval: 30s
+        - name: icmp-8-8-8-8
+          url: 8.8.8.8
+          module: icmp
+          interval: 30s
+        - name: tcp-8-8-8-8-443
+          url: 8.8.8.8:443
+          module: tcp
+          interval: 30s
+
+routeUpdater:
+  enabled: true
+
+  config:
+    enabled: true
+    crontab: |
+      SHELL=/bin/sh
+      @every 1m sh /opt/update.sh 8.8.8.8
+      @every 1m sh /opt/update.sh 1.1.1.1

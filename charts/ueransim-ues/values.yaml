@@ -101,3 +101,140 @@ podAnnotations: {}
 affinity: {}
 nodeSelector: {}
 tolerations: []
+
+blackboxExporter:
+  enabled: false
+  image: quay.io/prometheus/blackbox-exporter:v0.24.0
+
+  args:
+    - "--config.file=/config/blackbox.yaml"
+
+  config:
+    enabled: true
+    data:
+      modules:
+          http_2xx:
+            prober: http
+            timeout: 5s
+            http:
+              valid_http_versions: ["HTTP/1.1", "HTTP/2.0"]
+              follow_redirects: true
+              preferred_ip_protocol: "ip4"
+          tcp:
+            prober: tcp
+            timeout: 5s
+            tcp:
+              preferred_ip_protocol: "ip4"
+          icmp:
+            prober: icmp
+            timeout: 5s
+            icmp:
+              preferred_ip_protocol: "ip4"
+
+  metrics:
+    enabled: true
+    serviceMonitor:
+      labels: {}
+      honorLabels: false
+      endpoints:
+        scheme: http
+        port: metrics
+        path: "/probe"
+
+      targets: []
+        # - name: https_ya_ru
+        #   url: https://ya.ru
+        #   module: http_2xx
+        #   interval: 30s
+
+  service:
+    enabled: true
+    type: ClusterIP
+    port: 9115
+
+  ports:
+    - name: metrics
+      containerPort: 9115
+      protocol: TCP
+
+  resources:
+    limits:
+      memory: 300Mi
+    requests:
+      memory: 50Mi
+
+  livenessProbe:
+    httpGet:
+      path: /-/healthy
+      port: metrics
+    failureThreshold: 3
+  readinessProbe:
+    httpGet:
+      path: /-/healthy
+      port: metrics
+
+routeUpdater:
+  enabled: false
+  image: webdevops/go-crond:23.2.0-alpine
+
+  args:
+    - "--include=/opt/crontab"
+
+  config:
+    enabled: true
+    crontab: |
+      SHELL=/bin/sh
+      @every 1m root sh /opt/update.sh 8.8.8.8
+
+    update_sh: |
+      #!/bin/sh
+      set -eu
+
+      IFACE_NAME="uesimtun0"
+      HOST_NAME=${1}
+
+      is_ip() {
+          local ip=${1}
+          if expr "$ip" : '[0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*$' >/dev/null; then
+              return 0
+          else
+              return 1
+          fi
+      }
+
+      resolve_dns() {
+          local host="$1"
+          ip=$(nslookup ${1} | awk '/^Address: / { print $2 }' | head -1)
+          echo $ip
+      }
+
+
+      if is_ip "${1}"; then
+          resolved_ip=${1}
+      else
+          resolved_ip=$(resolve_dns ${1})
+      fi
+
+      # set route via custom interfaces
+      ip ro add ${resolved_ip} dev ${IFACE_NAME}
+
+  ports:
+    - name: metrics
+      containerPort: 8080
+      protocol: TCP
+
+  resources:
+    limits:
+      memory: 50Mi
+    requests:
+      memory: 50Mi
+
+  livenessProbe:
+    httpGet:
+      path: /healthz
+      port: metrics
+    failureThreshold: 3
+  readinessProbe:
+    httpGet:
+      path: /healthz
+      port: metrics

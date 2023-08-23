@@ -1,0 +1,12 @@
+{{- if and .Values.blackboxExporter.enabled .Values.blackboxExporter.config.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "common.names.fullname" . }}-bb
+  namespace: {{ .Release.Namespace | quote }}
+  labels: {{- include "common.labels.standard" . | nindent 4 }}
+    app.kubernetes.io/component: bb
+data:
+  blackbox.yaml: |
+{{ toYaml .Values.blackboxExporter.config.data | indent 4 }}
+{{- end }}
